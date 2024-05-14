@@ -10,7 +10,9 @@ a set of tools to make music (== noise) with numpy.
 - break down notebook into example scripts (+ wav output)
 - have a collection of functions like `delay` or `bandpass`?
 - remove use of time arrays, where not necessary (see below)
+- rebuild stereo functionality (see [numpy2wav.py gist](https://gist.github.com/suessspeise/c103a9bd92d88151dc1731675980101f?permalink_comment_id=5050338#gistcomment-5050338))
 
+  
 ## time arrays
 
 The design choice of sometimes requiring a time array and an amplitude array, and at other times only an amplitude array, can lead to confusion and inconsistency in the API design of the library. This inconsistency might make the library harder to use and understand, especially for new users or when integrating with other systems. Here are some suggestions for improvement:
