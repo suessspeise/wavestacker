@@ -11,6 +11,8 @@ a set of tools to make music (== noise) with numpy.
 - have a collection of functions like `delay` or `bandpass`?
 - remove use of time arrays, where not necessary (see below)
 - rebuild stereo functionality (see [numpy2wav.py gist](https://gist.github.com/suessspeise/c103a9bd92d88151dc1731675980101f?permalink_comment_id=5050338#gistcomment-5050338))
+- method to fetch a track from the mixer by name (to add to another mixer)
+- make `Mixer.get_mix()` optionally accept a list of track names to mix together
 
   
 ## time arrays
