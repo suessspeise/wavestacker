@@ -458,21 +458,3 @@ class StereoAudioBuffer(MonoAudioBuffer):
         left_channel = interleaved_data_np[0::2]
         right_channel = interleaved_data_np[1::2]
         return left_channel, right_channel
-    
-    def _uninterleave_stereo_data(self, interleaved_data):
-        """
-        Uninterleaves stereo audio data into separate left and right channels.
-
-        Args:
-            interleaved_data (bytearray): The interleaved stereo audio data.
-
-        Returns:
-            tuple: Two numpy.ndarrays representing the left and right channels, respectively.
-        """
-        interleaved_data_np = np.frombuffer(interleaved_data, dtype=np.int16)  # Ensure dtype matches encoding format
-        left_channel = interleaved_data_np[0::2]
-        right_channel = interleaved_data_np[1::2]
-        return left_channel, right_channel
-=======
-            print("WavPlayer is not available. Playback functionality is disabled.")
->>>>>>> 0d7906257ced62738f8618c1431d8dea502f49ac
