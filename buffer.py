@@ -1,38 +1,49 @@
 from abc import ABC, abstractmethod
-
-import numpy as np
+import warnings
 import struct
+import numpy as np
 
 # for plotting in a notebook
-import matplotlib.pyplot as plt
-
+plotting_is_available = False
+try:
+    import matplotlib.pyplot as plt
+    plotting_is_available = True
+except ImportError:
+    warnings.warn("Plotting is not available because matplotlib could not be imported.", ImportWarning)
+    
 # for replay inside a notebook
-from IPython.display import Audio
-import tempfile
+wavplayer_is_available = False
+try: 
+    from IPython.display import Audio
+    import tempfile
 
-class WavPlayer:
-    """
-    A class to replay audio inside a jupyter notebook.
+    class WavPlayer:
+        """
+        A class to replay audio inside a Jupyter notebook.
 
-    Example:
-        >>> Wavplayer('output.wav).play()
-    """
-    def __init__(self, file_path):
-        self.file_path = file_path
-    
-    def play(self):
+        Example:
+            >>> WavPlayer('output.wav').play()
         """
-        Loads and plays the WAV file.
-        """
-        return Audio(filename=self.file_path)
-    
+        def __init__(self, file_path):
+            self.file_path = file_path
+
+        def play(self):
+            """
+            Loads and plays the WAV file.
+            """
+            return Audio(filename=self.file_path)
+
+    wavplayer_is_available = True
+except ImportError:
+    warnings.warn("WavPlayer is not available because IPython.display.Audio could not be imported. Playback functionality is disabled.", ImportWarning)
+
     
 class MonoTrack:
     """
     A class representing an audio track.
     """
 
-    def __init__(self, data=None, amplitude=1.0, position=0.0, name=''):
+    def __init__(self, data=None, amplitude=1.0, position=0.0, name='', sample_rate=44100):
         """
         Initializes a Track object.
 
@@ -42,13 +53,14 @@ class MonoTrack:
             position (float): The time offset indicating when the track starts.
             name (str): The name of the track.
         """
+        self.sample_rate = sample_rate
         self.data = data
         self.amplitude = amplitude
         self.position = position
         self.name = name
         
     def __repr__(self):
-        return f'MonoTrack, {len(self.tracks)} tracks:\n' + str([t.name for t in self.tracks])
+        return f'MonoTrack, {len(self.data) / self.sample_rate:.1f}s'
 
     
 class MonoMixer:
@@ -62,11 +74,11 @@ class MonoMixer:
 
     def __repr__(self):
         duration = max(len(t.data) + t.position * self.sample_rate for t in self.tracks)/self.sample_rate
-        return f'MonoMixer, {len(self.tracks)} tracks, {duration:.1f}s:\n' #+ str([t.name for t in self.tracks])
+        return f'MonoMixer, {len(self.tracks)} tracks, {duration:.1f}s'
         
     def add(self, data, amplitude=1.0, position=0.0, name=None):
         if name == None: name = f'track{str(len(self.tracks)).rjust(3,"0")}'
-        self.tracks.append(MonoTrack(data, amplitude, position, name))
+        self.tracks.append(MonoTrack(data, amplitude, position, name, self.sample_rate))
         
     def _normalise_signal(self, y):
         max_val = np.max(np.abs(y))
@@ -89,14 +101,10 @@ class MonoMixer:
         Returns:
             numpy.ndarray: The mixed audio data.
         """
-        # Find the maximum length of tracks
-        max_length = max(track.data.shape[0] + int(track.position * self.sample_rate) for track in self.tracks)
+        max_length = max(track.data.shape[0] + int(track.position * self.sample_rate) for track in self.tracks) # Find the maximum length of tracks
+        mixed_data = np.zeros(max_length) # Initialize an array to hold the mixed audio data
         
-        # Initialize an array to hold the mixed audio data
-        mixed_data = np.zeros(max_length)
-        
-        # Mix each track
-        for track in self.tracks:
+        for track in self.tracks: # Mix each track
             start_idx = int(track.position * self.sample_rate)
             end_idx = start_idx + track.data.shape[0]
             mixed_data[start_idx:end_idx] += track.data * track.amplitude
@@ -104,23 +112,23 @@ class MonoMixer:
         return np.linspace(0,len(mixed_data)/self.sample_rate, len(mixed_data)), self._normalise_signal(mixed_data)
 
     def plot(self):
-        fig, axs = plt.subplots(len(self.tracks), 1, figsize=(20,2*len(self.tracks)), sharex=True)
-        for ax, track in zip(axs, self.tracks):
-            ax.set_ylim(-1.1,1.1)
-            ax.set_title(track.name, loc='left')
-            ax.axhline(0, lw=0.5, color='black')
-            ax.grid(axis='x')
-            y = track.data * track.amplitude
-            t = np.linspace(0.0+track.position, 
-                            track.position + len(track.data)/self.sample_rate,  
-                            len(track.data))
-            ax.plot(t,y)
-        if len(axs) > 1:
-            for ax in axs[0:-1]: ax.axes.xaxis.set_ticklabels([])
-        return fig, axs
-    
-    
-
+        if plotting_is_available:
+            fig, axs = plt.subplots(len(self.tracks), 1, figsize=(20,2*len(self.tracks)), sharex=True)
+            for ax, track in zip(axs, self.tracks):
+                ax.set_ylim(-1.1,1.1)
+                ax.set_title(track.name, loc='left')
+                ax.axhline(0, lw=0.5, color='black')
+                ax.grid(axis='x')
+                y = track.data * track.amplitude
+                t = np.linspace(0.0+track.position, 
+                                track.position + len(track.data)/self.sample_rate,  
+                                len(track.data))
+                ax.plot(t,y)
+            if len(axs) > 1:
+                for ax in axs[0:-1]: ax.axes.xaxis.set_ticklabels([])
+            return fig, axs
+        else:
+            print("Plotting is not available. Please install matplotlib to enable this feature.")
 
 
 class BaseAmplitudeEncoder(ABC):
@@ -146,6 +154,10 @@ class BaseAmplitudeEncoder(ABC):
     def get_format(self):
         return self.encoding_format
     
+    def _validate_amplitude_range(self, amplitude_array):
+        # Validate amplitude range
+        if not np.all((-1.0 <= amplitude_array) & (amplitude_array <= 1.0)):
+            raise ValueError("Amplitude values must be between -1.0 and 1.0.")
     @abstractmethod
     def encode(self, amplitude_array):
         """
@@ -171,6 +183,7 @@ class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
         self.encoding_format = 'B'  # Short type (16-bit signed integer)
     
     def encode(self, amplitude_array):
+        self._validate_amplitude_range(amplitude_array)
         binary_data = bytearray()
         for amplitude in amplitude_array:
             amplitude_byte = int((amplitude + 1.0) * 127.5)
@@ -197,6 +210,7 @@ class AmplitudeEncoder_short(BaseAmplitudeEncoder):
         self.encoding_format = 'h'  # Short type (16-bit signed integer)
 
     def encode(self, amplitude_array):
+        self._validate_amplitude_range(amplitude_array)
         binary_data = bytearray()
         for amplitude in amplitude_array:
             amplitude_int = int(amplitude * 32767.0)
@@ -285,15 +299,12 @@ class MonoAudioBuffer:
             file.write(struct.pack('<I', data_chunk_size))
             # file.write(data_chunk_size.to_bytes(4, byteorder='little'))
             file.write(bytearray(self.data))
-            
-    def play(self):
-        # Create a temporary file using the tempfile library
-        with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
-            self.write_to_wav(tmp_file.name)
-            return WavPlayer(tmp_file.name).play()
 
     def plot(self):
-        return self.encoder.plot(self.data)
+        if plotting_is_available:
+            return self.encoder.plot(self.data)
+        else:
+            print("Plotting is not available. Please install matplotlib to enable this feature.")
     
     def estimate_disk_space(self):
         """
@@ -304,3 +315,12 @@ class MonoAudioBuffer:
         """
         data_subchunk_size = len(self.data) * struct.calcsize(self.encoder.encoding_format)
         return 44 + data_subchunk_size #WAV header is fixed 44 bytes
+    
+    def play(self):
+        if wavplayer_is_available:
+            # Create a temporary file using the tempfile library
+            with tempfile.NamedTemporaryFile(delete=True, suffix='.wav') as tmp_file:
+                self.write_to_wav(tmp_file.name)
+                return WavPlayer(tmp_file.name).play()
+        else:
+            print("WavPlayer is not available. Playback functionality is disabled.")
