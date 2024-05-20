@@ -345,3 +345,123 @@ class MonoAudioBuffer:
                 return WavPlayer(tmp_file.name).play()
         else:
             print("WavPlayer is not available. Playback functionality is disabled.")
+
+
+class StereoAudioBuffer(MonoAudioBuffer):
+    def __init__(self, encoder=AmplitudeEncoder(), sample_rate=44100):
+        super().__init__(encoder, sample_rate)
+        # Initialize a separate list for right channel data
+        self.right_channel_data = []
+
+    def add_audio_data(self, left_channel_data, right_channel_data):
+        """
+        Encodes and adds stereo audio data to the buffer.
+
+        Args:
+            left_channel_data (numpy.ndarray): The left channel audio data.
+            right_channel_data (numpy.ndarray): The right channel audio data.
+        """
+        assert len(left_channel_data) == len(right_channel_data), "Left and right channels must have the same length."
+        stereo_data = self._interleave_stereo_data(left_channel_data, right_channel_data)
+        encoded_data = self.encoder.encode(stereo_data)
+        self.data.extend(encoded_data)
+
+    def _interleave_stereo_data(self, left_channel, right_channel):
+        """ 
+        Interleaves left and right channel data for stereo audio.
+
+        Args:
+            left_channel (numpy.ndarray): The left channel audio data.
+            right_channel (numpy.ndarray): The right channel audio data.
+
+        Returns:
+            numpy.ndarray: The interleaved stereo audio data.
+        """
+        stereo_data = np.empty((len(left_channel) + len(right_channel),), dtype=left_channel.dtype)
+        stereo_data[0::2] = left_channel
+        stereo_data[1::2] = right_channel
+        return stereo_data
+
+    def write_to_wav(self, filename):
+        """ 
+        Writes the encoded stereo audio data to a WAV file.
+
+        Args:
+            filename (str): The name of the file to write the audio data to.
+        """
+        num_channels = 2  # Stereo
+        bits_per_sample = self.encoder.bits_per_sample
+        byte_rate = self.sample_rate * num_channels * bits_per_sample // 8
+        block_align = num_channels * bits_per_sample // 8
+        data_chunk_size = len(self.data)
+        file_size = 36 + data_chunk_size  # 36 bytes for the header + size of data
+
+        with open(filename, 'wb+') as file:
+            # RIFF header
+            file.write(b'RIFF')
+            file.write(struct.pack('<I', file_size))
+            file.write(b'WAVE')
+            # fmt subchunk
+            file.write(b'fmt ')
+            file.write(struct.pack('<I', 16))  # Subchunk size
+            file.write(struct.pack('<H', 1))  # Audio format (1 is PCM)
+            file.write(struct.pack('<H', num_channels))  # Number of channels
+            file.write(struct.pack('<I', self.sample_rate))  # Sample rate
+            file.write(struct.pack('<I', byte_rate))  # Byte rate
+            file.write(struct.pack('<H', block_align))  # Block align
+            file.write(struct.pack('<H', bits_per_sample))  # Bits per sample
+            # data subchunk
+            file.write(b'data')
+            file.write(struct.pack('<I', data_chunk_size))
+            file.write(bytearray(self.data))
+
+    def plot(self):
+        if plotting_is_available:
+            left_channel, right_channel = self._uninterleave_stereo_data(bytearray(self.data))
+            time_axis = np.linspace(0, len(left_channel) / self.sample_rate, len(left_channel))
+            
+            # Plotting
+            fig, axs = plt.subplots(2, 1, figsize=(20, 4), sharex=True)
+            axs[0].plot(time_axis, left_channel, label="Left Channel")
+            axs[0].set_title("Left Channel")
+            axs[0].set_ylabel("Amplitude")
+
+            axs[1].plot(time_axis, right_channel, label="Right Channel")
+            axs[1].set_title("Right Channel")
+            axs[1].set_xlabel("Time (s)")
+            axs[1].set_ylabel("Amplitude")
+
+            plt.tight_layout()
+            return fig, axs
+        else:
+            print("Plotting is not available. Please install matplotlib to enable this feature.")
+
+    def _uninterleave_stereo_data(self, interleaved_data):
+        """
+        Uninterleaves stereo audio data into separate left and right channels.
+
+        Args:
+            interleaved_data (bytearray): The interleaved stereo audio data.
+
+        Returns:
+            tuple: Two numpy.ndarrays representing the left and right channels, respectively.
+        """
+        interleaved_data_np = np.frombuffer(interleaved_data, dtype=np.int16)  # Ensure dtype matches encoding format
+        left_channel = interleaved_data_np[0::2]
+        right_channel = interleaved_data_np[1::2]
+        return left_channel, right_channel
+    
+    def _uninterleave_stereo_data(self, interleaved_data):
+        """
+        Uninterleaves stereo audio data into separate left and right channels.
+
+        Args:
+            interleaved_data (bytearray): The interleaved stereo audio data.
+
+        Returns:
+            tuple: Two numpy.ndarrays representing the left and right channels, respectively.
+        """
+        interleaved_data_np = np.frombuffer(interleaved_data, dtype=np.int16)  # Ensure dtype matches encoding format
+        left_channel = interleaved_data_np[0::2]
+        right_channel = interleaved_data_np[1::2]
+        return left_channel, right_channel
