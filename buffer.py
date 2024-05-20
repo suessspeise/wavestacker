@@ -94,22 +94,43 @@ class MonoMixer:
         """
         self.tracks.append(track)    
 
-    def get_mix(self):
+    def get_tracks_by_name(self, name):
         """
-        Mixes all tracks together and returns the mixed audio data.
+        Fetches tracks by name.
+
+        Args:
+            name (str): The name of the tracks to fetch.
 
         Returns:
-            numpy.ndarray: The mixed audio data.
+            list: A list of tracks with the given name.
         """
-        max_length = max(track.data.shape[0] + int(track.position * self.sample_rate) for track in self.tracks) # Find the maximum length of tracks
-        mixed_data = np.zeros(max_length) # Initialize an array to hold the mixed audio data
-        
-        for track in self.tracks: # Mix each track
+        return [track for track in self.tracks if track.name == name]
+
+    def get_mix(self, track_names=None):
+        """
+        Mixes all tracks together or a subset of tracks if track_names is provided.
+
+        Args:
+            track_names (list, optional): A list of track names to mix. Mixes all tracks if None.
+
+        Returns:
+            tuple: Time array and the mixed audio data as a numpy.ndarray.
+        """
+        if track_names is not None:
+            # Filter tracks to include only those with names in track_names
+            tracks_to_mix = [track for track in self.tracks if track.name in track_names]
+        else:
+            tracks_to_mix = self.tracks
+
+        max_length = max((track.data.shape[0] + int(track.position * self.sample_rate) for track in tracks_to_mix), default=0) # Find the maximum length of tracks
+        mixed_data = np.zeros(max_length)  # Initialize an array to hold the mixed audio data
+
+        for track in tracks_to_mix:  # Mix each track into it
             start_idx = int(track.position * self.sample_rate)
             end_idx = start_idx + track.data.shape[0]
             mixed_data[start_idx:end_idx] += track.data * track.amplitude
-        
-        return np.linspace(0,len(mixed_data)/self.sample_rate, len(mixed_data)), self._normalise_signal(mixed_data)
+
+        return np.linspace(0, len(mixed_data) / self.sample_rate, len(mixed_data)), self._normalise_signal(mixed_data)
 
     def plot(self):
         if plotting_is_available:
