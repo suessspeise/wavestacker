@@ -37,31 +37,79 @@ try:
 except ImportError:
     warnings.warn("WavPlayer is not available because IPython.display.Audio could not be imported. Playback functionality is disabled.", ImportWarning)
 
-    
-class MonoTrack:
-    """
-    A class representing an audio track.
-    """
-
-    def __init__(self, data=None, amplitude=1.0, position=0.0, name='', sample_rate=44100):
+class BaseTrack(ABC):
+    def __init__(self, amplitude=1.0, position=0.0, name='', sample_rate=44100):
         """
-        Initializes a Track object.
+        Initialize the BaseTrack with common properties.
 
         Args:
-            data (numpy.ndarray): An array of float representing the audio data.
+            position (float): The time offset indicating when the track starts.
+            name (str): The name of the track.
+            sample_rate (int): The sample rate of the audio data.
             amplitude (float or numpy.ndarray): The amplitude of the audio track.
+        """
+        self.position = position
+        self.name = str(name)
+        self.sample_rate = int(sample_rate)
+        self.amplitude = amplitude
+
+    @abstractmethod
+    def get_data(self):
+        """
+        Retrieve the track's audio data.
+
+        Returns:
+            The audio data of the track. The specific return type will depend on the track type.
+        """
+        pass
+
+    @abstractmethod
+    def get_length(self):
+        pass
+    
+    def __repr__(self):
+        return f'{self.__class__.__name__}, {self.get_length():.1f}s (name="{self.name}", position={self.position}s, amplitude={self.amplitude})'
+    
+class MonoTrack(BaseTrack):
+    def __init__(self, data=None, amplitude=1.0, position=0.0, name='', sample_rate=44100):
+        super().__init__(position=position, name=name, sample_rate=sample_rate, amplitude=amplitude)
+        self.data = data
+
+    def get_data(self):
+        return self.data
+    
+    def get_length(self):
+        return len(self.data) / self.sample_rate
+
+    
+class StereoTrack(BaseTrack):
+    def __init__(self, left_data=None, right_data=None, amplitude=1.0, position=0.0, name='', sample_rate=44100):
+        """
+        Initializes a StereoTrack object.
+
+        Args:
+            left_data (numpy.ndarray): An array of float representing the left channel audio data.
+            right_data (numpy.ndarray): An array of float representing the right channel audio data.
             position (float): The time offset indicating when the track starts.
             name (str): The name of the track.
         """
-        self.sample_rate = sample_rate
-        self.data = data
-        self.amplitude = amplitude
-        self.position = position
-        self.name = name
-        
-    def __repr__(self):
-        return f'MonoTrack, {len(self.data) / self.sample_rate:.1f}s'
+        super().__init__(position=position, name=name, sample_rate=sample_rate, amplitude=amplitude)
+        assert len(left_data) == len(right_data), "Left and right data must have the same length."
+        self.left_data = left_data
+        self.right_data = right_data
 
+    def get_data(self):
+        """
+        Retrieve the stereo track's audio data as separate left and right channels.
+
+        Returns:
+            tuple: Two numpy.ndarrays representing the left and right channels, respectively.
+        """
+        return self.left_data, self.right_data
+    
+    def get_length(self):
+        return len(self.left_data) / self.sample_rate
+    
     
 class MonoMixer:
     """
@@ -94,7 +142,7 @@ class MonoMixer:
         """
         self.tracks.append(track)    
 
-    def get_tracks_by_name(self, name):
+    def get_tracks(self, name):
         """
         Fetches tracks by name.
 
@@ -206,10 +254,6 @@ class BaseAmplitudeEncoder(ABC):
         """
         pass
 
-#     @abstractmethod
-#     def plot(self, data):
-#         pass
-    
     
 class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
     def __init__(self, sample_rate=44100):
