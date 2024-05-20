@@ -18,83 +18,7 @@ class WavPlayer:
         Loads and plays the WAV file.
         """
         return Audio(filename=self.file_path)
-
-
-# class AmplitudeBinaryEncoder:
-#     """
-#     A class to encode time and amplitude arrays into binary data for audio generation.
-#     """
-
-#     def __init__(self, sample_rate=44100):
-#         """
-#         Initialize the Encoder with the given sample rate.
-
-#         Args:
-#             sample_rate (int): The sample rate of the audio data.
-#         """
-#         self.sample_rate = sample_rate
-#         self.encoding_format = 'B'
-#         self.bits_per_sample = 8
-        
-#     def __repr__(self):
-#         return f'AmplitudeBinaryEncoder (sample rate={self.sample_rate}Hz)'
-
-#     def set_sample_rate(self, sample_rate):
-#         self.sample_rate = sample_rate
-        
-#     def get_format(self):
-#         return self.encoding_format
-        
-#     def encode(self, time_array, amplitude_array):
-#         """
-#         Encode time and amplitude arrays into binary data.
-
-#         Args:
-#             time_array (numpy.ndarray): Array representing time in seconds.
-#             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
-
-#         Returns:
-# 		    bytearray: The encoded binary data.
-#         """
-#         assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
-        
-#         binary_data = bytearray()
-#         for time, amplitude in zip(time_array, amplitude_array):
-#             # Convert amplitude to 8-bit unsigned integer (assuming 8-bit encoding)
-#             amplitude_byte = int((amplitude + 1.0) * 127.5)
-#             binary_data.append(amplitude_byte)
-#         return binary_data
     
-
-# class hAmplitudeBinaryEncoder(AmplitudeBinaryEncoder):
-#     def __init__(self, sample_rate=44100):
-#         super().__init__(sample_rate)
-#         self.bits_per_sample = 16  # 16 bits per sample
-#         self.encoding_format = 'h'  # Short type (16-bit signed integer)
-
-#     def encode(self, time_array, amplitude_array):
-#         """
-#         Encode time and amplitude arrays into 16-bit signed integer binary data.
-
-#         Args:
-#             time_array (numpy.ndarray): Array representing time in seconds.
-#             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
-
-#         Returns:
-#             bytearray: The encoded binary data.
-#         """
-#         assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
-        
-#         binary_data = bytearray()
-#         for amplitude in amplitude_array:
-#             # Convert amplitude to 16-bit signed integer
-#             amplitude_int = int(amplitude * 32767.0)
-#             # Use extend to add the bytes object to the bytearray
-#             binary_data.extend(struct.pack('h', amplitude_int))
-#         return binary_data
-
-
-
 class AmplitudeBinaryEncoder_unsignedchar:
     """
     A class to encode time and amplitude arrays into binary data for audio generation.
@@ -125,25 +49,6 @@ class AmplitudeBinaryEncoder_unsignedchar:
     def add_final_sequence(self):
         pass # not needed for Audio data
         
-#     def encode(self, time_array, amplitude_array):
-#         """
-#         Encode time and amplitude arrays into binary data.
-
-#         Args:
-#             time_array (numpy.ndarray): Array representing time in seconds.
-#             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
-
-#         Returns:
-#             bytearray: The encoded binary data.
-#         """
-#         assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
-        
-#         binary_data = bytearray()
-#         for time, amplitude in zip(time_array, amplitude_array):
-#             # Convert amplitude to 8-bit unsigned integer (assuming 8-bit encoding)
-#             amplitude_byte = int((amplitude + 1.0) * 127.5)
-#             binary_data.append(amplitude_byte)
-#         return binary_data
     
     def plot(self, data):
         fig, ax = plt.subplots(figsize=(20,2))
@@ -157,8 +62,6 @@ class AmplitudeBinaryEncoder_unsignedchar:
         ax.set_xlim(0, max(x))
         return fig, ax
     
-    # def xxx(self, data):
-    #     return struct.pack(encoding_format * len(data), * data)
     
     def encode(self, time_array, amplitude_array):
         """
@@ -187,29 +90,6 @@ class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
         self.bits_per_sample = 16  # 16 bits per sample
         self.encoding_format = 'h'  # Short type (16-bit signed integer)
 
-#     def encode(self, time_array, amplitude_array):
-#         """
-#         Encode time and amplitude arrays into 16-bit signed integer binary data.
-
-#         Args:
-#             time_array (numpy.ndarray): Array representing time in seconds.
-#             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
-
-#         Returns:
-#             bytearray: The encoded binary data.
-#         """
-#         assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
-    
-#         binary_data = bytearray()
-#         linear_data = list()
-#         for amplitude in amplitude_array:
-#             amplitude_int = int(amplitude * 32767.0)
-#             linear_data.append(amplitude_int)
-#             # binary_data.append(struct.pack(self.encoding_format, amplitude_int))
-#             binary_data.extend(struct.pack(self.encoding_format, amplitude_int))
-#         return binary_data
-    
-
     def plot(self, data):
         fig, ax = plt.subplots(figsize=(20,2))
         ax.axhline(0, lw=0.5, color='black')
@@ -221,11 +101,6 @@ class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
         ax.plot(x, y)
         ax.set_xlim(0, max(x))
         return fig, ax
-    
-    # def xxx(self, data):
-    #     data = bytearray(data)
-    #     samples = np.frombuffer(data, dtype=np.int16)
-    #     return samples.tobytes()
 
     def encode(self, time_array, amplitude_array):
         """
