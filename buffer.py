@@ -1,4 +1,4 @@
-# from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod
 
 import numpy as np
 import struct
@@ -120,11 +120,10 @@ class MonoMixer:
         return fig, axs
     
     
-class AmplitudeBinaryEncoder_unsignedchar:
-    """
-    A class to encode amplitude arrays into binary data for audio generation.
-    """
 
+
+
+class BaseAmplitudeEncoder(ABC):
     def __init__(self, sample_rate=44100):
         """
         Initialize the Encoder with the given sample rate.
@@ -133,17 +132,34 @@ class AmplitudeBinaryEncoder_unsignedchar:
             sample_rate (int): The sample rate of the audio data.
         """
         self.sample_rate = sample_rate
-        self.encoding_format = 'B'
-        self.bits_per_sample = 8
         
     def __repr__(self):
-        return f'AmplitudeBinaryEncoder (sample rate={self.sample_rate}Hz)'
-
+        return f'AmplitudeEncoder (sample rate={self.sample_rate}Hz)'
+    
     def set_sample_rate(self, sample_rate):
         self.sample_rate = sample_rate
         
     def get_format(self):
         return self.encoding_format
+    
+    @abstractmethod
+    def encode(self, amplitude_array):
+        pass
+
+    @abstractmethod
+    def plot(self, data):
+        pass
+    
+    
+class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
+    """
+    A class to encode amplitude arrays into binary data for audio generation.
+    """
+
+    def __init__(self, sample_rate=44100):
+        super().__init__(sample_rate)
+        self.bits_per_sample = 8  # 8 bits per sample
+        self.encoding_format = 'B'  # Short type (16-bit signed integer)
         
     def plot(self, data):
         fig, ax = plt.subplots(figsize=(20,2))
@@ -175,23 +191,8 @@ class AmplitudeBinaryEncoder_unsignedchar:
             binary_data.extend(packed_data)
         return binary_data
     
-
-
-
-# class BaseAmplitudeEncoder(ABC):
-#     def __init__(self, sample_rate=44100):
-#         self.sample_rate = sample_rate
-
-#     @abstractmethod
-#     def encode(self, amplitude_array):
-#         pass
-
-#     @abstractmethod
-#     def plot(self, data):
-#         pass
     
-    
-class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
+class AmplitudeEncoder_short(BaseAmplitudeEncoder):
     def __init__(self, sample_rate=44100):
         super().__init__(sample_rate)
         self.bits_per_sample = 16  # 16 bits per sample
@@ -228,7 +229,7 @@ class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
         return binary_data
     
     
-class AmplitudeBinaryEncoder(AmplitudeBinaryEncoder_short):
+class AmplitudeEncoder(AmplitudeEncoder_short):
     pass # defaulting to short
 
 
@@ -241,7 +242,7 @@ class MonoAudioBuffer:
         audio_buffer (bytearray): The buffer to store the generated audio data.
         encoder (Encoder): The encoder used to encode audio data.
     """
-    def __init__(self, encoder=AmplitudeBinaryEncoder_short(), sample_rate=44100):
+    def __init__(self, encoder=AmplitudeEncoder_short(), sample_rate=44100):
         """
         Initialize the AudioBuffer with the given sample rate and baud rate.
 
