@@ -1,8 +1,14 @@
+# from abc import ABC, abstractmethod
+
 import numpy as np
 import struct
-import matplotlib.pyplot as plt
-from IPython.display import Audio
 
+# for plotting in a notebook
+import matplotlib.pyplot as plt
+
+# for replay inside a notebook
+from IPython.display import Audio
+import tempfile
 
 class WavPlayer:
     """
@@ -116,7 +122,7 @@ class MonoMixer:
     
 class AmplitudeBinaryEncoder_unsignedchar:
     """
-    A class to encode time and amplitude arrays into binary data for audio generation.
+    A class to encode amplitude arrays into binary data for audio generation.
     """
 
     def __init__(self, sample_rate=44100):
@@ -138,11 +144,6 @@ class AmplitudeBinaryEncoder_unsignedchar:
         
     def get_format(self):
         return self.encoding_format
-    
-    def add_initial_sequence(self):
-        pass # not needed for Audio data
-    def add_final_sequence(self):
-        pass # not needed for Audio data
         
     def plot(self, data):
         fig, ax = plt.subplots(figsize=(20,2))
@@ -156,18 +157,16 @@ class AmplitudeBinaryEncoder_unsignedchar:
         ax.set_xlim(0, max(x))
         return fig, ax
     
-    def encode(self, time_array, amplitude_array):
+    def encode(self, amplitude_array):
         """
-        Encode time and amplitude arrays into binary data.
+        Encode amplitude arrays into binary data.
 
         Args:
-            time_array (numpy.ndarray): Array representing time in seconds.
             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
 
         Returns:
             bytearray: The encoded binary data.
         """
-        assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
         
         binary_data = bytearray()
         for amplitude in amplitude_array:
@@ -177,6 +176,21 @@ class AmplitudeBinaryEncoder_unsignedchar:
         return binary_data
     
 
+
+
+# class BaseAmplitudeEncoder(ABC):
+#     def __init__(self, sample_rate=44100):
+#         self.sample_rate = sample_rate
+
+#     @abstractmethod
+#     def encode(self, amplitude_array):
+#         pass
+
+#     @abstractmethod
+#     def plot(self, data):
+#         pass
+    
+    
 class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
     def __init__(self, sample_rate=44100):
         super().__init__(sample_rate)
@@ -195,18 +209,16 @@ class AmplitudeBinaryEncoder_short(AmplitudeBinaryEncoder_unsignedchar):
         ax.set_xlim(0, max(x))
         return fig, ax
 
-    def encode(self, time_array, amplitude_array):
+    def encode(self, amplitude_array):
         """
-        Encode time and amplitude arrays into 16-bit signed integer binary data.
+        Encode amplitude arrays into 16-bit signed integer binary data.
 
         Args:
-            time_array (numpy.ndarray): Array representing time in seconds.
             amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
 
         Returns:
             bytearray: The encoded binary data.
         """
-        assert len(time_array) == len(amplitude_array), "Time and amplitude arrays must have the same length."
     
         binary_data = bytearray()
         for amplitude in amplitude_array:
@@ -242,32 +254,19 @@ class MonoAudioBuffer:
         self.sample_rate = sample_rate
         self.encoder.set_sample_rate(self.sample_rate)
         self.data = []
-        # self.encoded_data = []
         self.checksum = 0
     
     def __repr__(self):
         return f'{self.class_description}, encoder = {self.encoder}, contains {len(self.data)/self.sample_rate}s'
-
-#     def initialise(self):
-#         """
-#         Finalize the audio buffer by adding the final sequence.
-#         """
-#         self.encoder.add_initial_sequence()
-    
-#     def finalise(self):
-#         """
-#         Finalize the audio buffer by adding the final sequence.
-#         """
-#         self.encoder.add_final_sequence()
         
-    def add_audio_data(self, time_array, amplitude_array):
+    def add_audio_data(self, amplitude_array):
         """
         Encoded and add audio data to the buffer.
 
         Args:
             audio_data (bytearray): The audio data to be added.
         """
-        encoded_data = self.encoder.encode(time_array, amplitude_array)
+        encoded_data = self.encoder.encode(amplitude_array)
         self.data.extend(encoded_data)
             
     def write_to_wav(self, filename):
@@ -294,7 +293,6 @@ class MonoAudioBuffer:
             file.write(struct.pack('<I', byte_rate))  # Byte rate
             file.write(struct.pack('<H', block_align))  # Block align
             file.write(struct.pack('<H', bits_per_sample))  # Bits per sample
-
             # data subchunk
             file.write(b'data')
             file.write(struct.pack('<I', data_chunk_size))
