@@ -124,6 +124,10 @@ class MonoMixer:
 
 
 class BaseAmplitudeEncoder(ABC):
+    """
+    A class to encode amplitude arrays into binary data for audio generation.
+    """
+
     def __init__(self, sample_rate=44100):
         """
         Initialize the Encoder with the given sample rate.
@@ -144,73 +148,6 @@ class BaseAmplitudeEncoder(ABC):
     
     @abstractmethod
     def encode(self, amplitude_array):
-        pass
-
-    @abstractmethod
-    def plot(self, data):
-        pass
-    
-    
-class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
-    """
-    A class to encode amplitude arrays into binary data for audio generation.
-    """
-
-    def __init__(self, sample_rate=44100):
-        super().__init__(sample_rate)
-        self.bits_per_sample = 8  # 8 bits per sample
-        self.encoding_format = 'B'  # Short type (16-bit signed integer)
-        
-    def plot(self, data):
-        fig, ax = plt.subplots(figsize=(20,2))
-        ax.axhline(0, lw=0.5, color='black')
-        data_bytes = bytearray(data)  # Convert to bytearray if it's not already
-        # Convert data from 0-255 to -1.0 to 1.0
-        y = np.asarray(data_bytes, dtype=np.uint8)
-        y = y / 127.5 - 1.0
-        x = np.linspace(0, len(y) / self.sample_rate, len(y))
-        ax.plot(x, y)
-        ax.set_xlim(0, max(x))
-        return fig, ax
-    
-    def encode(self, amplitude_array):
-        """
-        Encode amplitude arrays into binary data.
-
-        Args:
-            amplitude_array (numpy.ndarray): Array representing amplitude (between -1.0 and 1.0).
-
-        Returns:
-            bytearray: The encoded binary data.
-        """
-        
-        binary_data = bytearray()
-        for amplitude in amplitude_array:
-            amplitude_byte = int((amplitude + 1.0) * 127.5)
-            packed_data = struct.pack(self.encoding_format, amplitude_byte)
-            binary_data.extend(packed_data)
-        return binary_data
-    
-    
-class AmplitudeEncoder_short(BaseAmplitudeEncoder):
-    def __init__(self, sample_rate=44100):
-        super().__init__(sample_rate)
-        self.bits_per_sample = 16  # 16 bits per sample
-        self.encoding_format = 'h'  # Short type (16-bit signed integer)
-
-    def plot(self, data):
-        fig, ax = plt.subplots(figsize=(20,2))
-        ax.axhline(0, lw=0.5, color='black')
-        data_bytes = bytearray(data)  # Convert to bytearray if it's not already
-        # Convert binary data to 16-bit integers and then to -1.0 to 1.0
-        y = np.frombuffer(data_bytes, dtype=np.int16)
-        y = y / 32767.0
-        x = np.linspace(0, len(y) / self.sample_rate, len(y))
-        ax.plot(x, y)
-        ax.set_xlim(0, max(x))
-        return fig, ax
-
-    def encode(self, amplitude_array):
         """
         Encode amplitude arrays into 16-bit signed integer binary data.
 
@@ -220,17 +157,66 @@ class AmplitudeEncoder_short(BaseAmplitudeEncoder):
         Returns:
             bytearray: The encoded binary data.
         """
+        pass
+
+    @abstractmethod
+    def plot(self, data):
+        pass
     
+    
+class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
+    def __init__(self, sample_rate=44100):
+        super().__init__(sample_rate)
+        self.bits_per_sample = 8  # 8 bits per sample
+        self.encoding_format = 'B'  # Short type (16-bit signed integer)
+    
+    def encode(self, amplitude_array):
+        binary_data = bytearray()
+        for amplitude in amplitude_array:
+            amplitude_byte = int((amplitude + 1.0) * 127.5)
+            packed_data = struct.pack(self.encoding_format, amplitude_byte)
+            binary_data.extend(packed_data)
+        return binary_data
+        
+    def plot(self, data):
+        fig, ax = plt.subplots(figsize=(20,2))
+        ax.axhline(0, lw=0.5, color='black')
+        data_bytes = bytearray(data)  # Convert to bytearray if it's not already
+        y = np.asarray(data_bytes, dtype=np.uint8)
+        y = y / 127.5 - 1.0  # Convert data from 0-255 to -1.0 to 1.0
+        x = np.linspace(0, len(y) / self.sample_rate, len(y))
+        ax.plot(x, y)
+        ax.set_xlim(0, max(x))
+        return fig, ax
+    
+    
+class AmplitudeEncoder_short(BaseAmplitudeEncoder):
+    def __init__(self, sample_rate=44100):
+        super().__init__(sample_rate)
+        self.bits_per_sample = 16  # 16 bits per sample
+        self.encoding_format = 'h'  # Short type (16-bit signed integer)
+
+    def encode(self, amplitude_array):
         binary_data = bytearray()
         for amplitude in amplitude_array:
             amplitude_int = int(amplitude * 32767.0)
             packed_data = struct.pack(self.encoding_format, amplitude_int)
             binary_data.extend(packed_data)
         return binary_data
+
+    def plot(self, data):
+        fig, ax = plt.subplots(figsize=(20,2))
+        ax.axhline(0, lw=0.5, color='black')
+        data_bytes = bytearray(data)  # Convert to bytearray if it's not already
+        y = np.frombuffer(data_bytes, dtype=np.int16)
+        y = y / 32767.0 # Convert binary data to 16-bit integers and then to -1.0 to 1.0
+        x = np.linspace(0, len(y) / self.sample_rate, len(y))
+        ax.plot(x, y)
+        ax.set_xlim(0, max(x))
+        return fig, ax
     
-    
-class AmplitudeEncoder(AmplitudeEncoder_short):
-    pass # defaulting to short
+# Setting AmplitudeEncoder_short as the default encoder
+AmplitudeEncoder = AmplitudeEncoder_short
 
 
 class MonoAudioBuffer:
@@ -242,7 +228,7 @@ class MonoAudioBuffer:
         audio_buffer (bytearray): The buffer to store the generated audio data.
         encoder (Encoder): The encoder used to encode audio data.
     """
-    def __init__(self, encoder=AmplitudeEncoder_short(), sample_rate=44100):
+    def __init__(self, encoder=AmplitudeEncoder(), sample_rate=44100):
         """
         Initialize the AudioBuffer with the given sample rate and baud rate.
 
@@ -318,4 +304,3 @@ class MonoAudioBuffer:
         """
         data_subchunk_size = len(self.data) * struct.calcsize(self.encoder.encoding_format)
         return 44 + data_subchunk_size #WAV header is fixed 44 bytes
-
