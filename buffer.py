@@ -104,6 +104,7 @@ class MonoMixer:
         Returns:
             list: A list of tracks with the given name.
         """
+<<<<<<< HEAD
         return [track for track in self.tracks if track.name == name]
 
     def get_mix(self, track_names=None):
@@ -126,6 +127,12 @@ class MonoMixer:
         mixed_data = np.zeros(max_length)  # Initialize an array to hold the mixed audio data
 
         for track in tracks_to_mix:  # Mix each track into it
+=======
+        max_length = max(track.data.shape[0] + int(track.position * self.sample_rate) for track in self.tracks) # Find the maximum length of tracks
+        mixed_data = np.zeros(max_length) # Initialize an array to hold the mixed audio data
+        
+        for track in self.tracks: # Mix each track
+>>>>>>> 0d7906257ced62738f8618c1431d8dea502f49ac
             start_idx = int(track.position * self.sample_rate)
             end_idx = start_idx + track.data.shape[0]
             mixed_data[start_idx:end_idx] += track.data * track.amplitude
@@ -344,6 +351,7 @@ class MonoAudioBuffer:
                 self.write_to_wav(tmp_file.name)
                 return WavPlayer(tmp_file.name).play()
         else:
+<<<<<<< HEAD
             print("WavPlayer is not available. Playback functionality is disabled.")
 
 
@@ -465,3 +473,6 @@ class StereoAudioBuffer(MonoAudioBuffer):
         left_channel = interleaved_data_np[0::2]
         right_channel = interleaved_data_np[1::2]
         return left_channel, right_channel
+=======
+            print("WavPlayer is not available. Playback functionality is disabled.")
+>>>>>>> 0d7906257ced62738f8618c1431d8dea502f49ac
