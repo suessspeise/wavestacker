@@ -155,12 +155,13 @@ class MonoMixer:
 
         return [track for track in self.tracks if track.name == name]
 
-    def get_mix(self, track_names=None):
+    def get_mix(self, track_names=None, return_time_array=False):
         """
         Mixes all tracks together or a subset of tracks if track_names is provided.
 
         Args:
             track_names (list, optional): A list of track names to mix. Mixes all tracks if None.
+            return_time_array (bool, optional): Set to True if you want both a time and amplitude array, default to False
 
         Returns:
             tuple: Time array and the mixed audio data as a numpy.ndarray.
@@ -178,8 +179,11 @@ class MonoMixer:
             start_idx = int(track.position * self.sample_rate)
             end_idx = start_idx + track.data.shape[0]
             mixed_data[start_idx:end_idx] += track.data * track.amplitude
-
-        return np.linspace(0, len(mixed_data) / self.sample_rate, len(mixed_data)), self._normalise_signal(mixed_data)
+        
+        if return_time_array:
+            return np.linspace(0, len(mixed_data) / self.sample_rate, len(mixed_data)), self._normalise_signal(mixed_data)
+        else:
+            return self._normalise_signal(mixed_data)
 
     def plot(self):
         if plotting_is_available:
