@@ -6,4 +6,4 @@ a set of tools to make music (== noise) with numpy.
 - add docstring to the existing code
 - break down notebook into example scripts (+ wav output)
 - have a collection of functions like `delay` or `bandpass`?
-- StereoMixer
+- add clip functionality to mixer
