@@ -1,6 +1,7 @@
 ### LOCAL
 gopro.md
 .DS_Store
+*.wav
 
 ### GLOBAL
 # https://github.com/github/gitignore/blob/main/Python.gitignore
