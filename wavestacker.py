@@ -198,8 +198,9 @@ class MonoMixer:
                                 track.position + len(track.data)/self.sample_rate,  
                                 len(track.data))
                 ax.plot(t,y)
-            if len(axs) > 1:
-                for ax in axs[0:-1]: ax.axes.xaxis.set_ticklabels([])
+                ax.set_xlim(0, max([len(t.data)/self.sample_rate + t.position for t in self.tracks]))
+            # if len(axs) > 1:
+            #     for ax in axs[0:-1]: ax.axes.xaxis.set_ticklabels([])
             return fig, axs
         else:
             print("Plotting is not available. Please install matplotlib to enable this feature.")
@@ -327,7 +328,7 @@ class MonoAudioBuffer:
         self.checksum = 0
     
     def __repr__(self):
-        return f'{self.class_description}, encoder = {self.encoder}, contains {len(self.data)/self.sample_rate}s'
+        return f'{self.class_description}, encoder = {self.encoder}, contains {len(self.data)/self.sample_rate:.2f}s'
         
     def add_audio_data(self, amplitude_array):
         """
@@ -411,7 +412,7 @@ class StereoAudioBuffer(MonoAudioBuffer):
         # Initialize a separate list for right channel data
         self.right_channel_data = []
 
-    def add_audio_data(self, left_channel_data, right_channel_data):
+    def add_audio_data(self, left_channel_data, right_channel_data=None):
         """
         Encodes and adds stereo audio data to the buffer.
 
@@ -419,6 +420,8 @@ class StereoAudioBuffer(MonoAudioBuffer):
             left_channel_data (numpy.ndarray): The left channel audio data.
             right_channel_data (numpy.ndarray): The right channel audio data.
         """
+        if right_channel_data == None: 
+            right_channel_data = left_channel_data
         assert len(left_channel_data) == len(right_channel_data), "Left and right channels must have the same length."
         stereo_data = self._interleave_stereo_data(left_channel_data, right_channel_data)
         encoded_data = self.encoder.encode(stereo_data)
