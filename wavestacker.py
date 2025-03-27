@@ -219,9 +219,10 @@ class BaseAmplitudeEncoder(ABC):
             sample_rate (int): The sample rate of the audio data.
         """
         self.sample_rate = sample_rate
-        
+
+    @abstractmethod
     def __repr__(self):
-        return f'AmplitudeEncoder (sample rate={self.sample_rate}Hz)'
+        pass
     
     def set_sample_rate(self, sample_rate):
         self.sample_rate = sample_rate
@@ -278,7 +279,9 @@ class AmplitudeEncoder_unsignedchar(BaseAmplitudeEncoder):
     def decode(self, encoded_data):
         data = np.frombuffer(bytearray(encoded_data), dtype=np.uint8)
         return (data / 127.5) - 1.0  # Convert from [0,255] to [-1.0,1.0]
-    
+
+    def __repr__(self):
+        return f'AmplitudeEncoder (unsigned, sample rate={self.sample_rate}Hz)'
     
 class AmplitudeEncoder_short(BaseAmplitudeEncoder):
     def __init__(self, sample_rate=44100):
@@ -298,6 +301,9 @@ class AmplitudeEncoder_short(BaseAmplitudeEncoder):
     def decode(self, encoded_data):
         data = np.frombuffer(encoded_data, dtype=np.int16)
         return data / 32767.0  # Convert from [-32768,32767] to [-1.0,1.0]
+        
+    def __repr__(self):
+        return f'AmplitudeEncoder (short, sample rate={self.sample_rate}Hz)'
     
 # Setting AmplitudeEncoder_short as the default encoder
 AmplitudeEncoder = AmplitudeEncoder_short
@@ -341,6 +347,12 @@ class MonoAudioBuffer:
         self.data.extend(encoded_data)
             
     def write_to_wav(self, filename):
+        """ 
+        Writes the encoded stereo audio data to a WAV file.
+
+        Args:
+            filename (str): The name of the file to write the audio data to.
+        """
         encoding_format = self.encoder.get_format()
         num_channels = 1  # Mono
         bits_per_sample = self.encoder.bits_per_sample
