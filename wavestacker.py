@@ -432,7 +432,7 @@ class StereoAudioBuffer(MonoAudioBuffer):
             left_channel_data (numpy.ndarray): The left channel audio data.
             right_channel_data (numpy.ndarray): The right channel audio data.
         """
-        if right_channel_data == None: 
+        if right_channel_data is None: 
             right_channel_data = left_channel_data
         assert len(left_channel_data) == len(right_channel_data), "Left and right channels must have the same length."
         stereo_data = self._interleave_stereo_data(left_channel_data, right_channel_data)
