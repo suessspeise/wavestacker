@@ -37,6 +37,25 @@ try:
 except ImportError:
     warnings.warn("WavPlayer is not available because IPython.display.Audio could not be imported. Playback functionality is disabled.", ImportWarning)
 
+def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4)):
+    if plotting_is_available:
+        spectrum = np.fft.fft(signal)
+        frequencies = np.fft.fftfreq(len(spectrum), 1/sample_rate)
+        # Only take the positive half of the spectrum and frequencies
+        positive_freqs = frequencies[:len(frequencies)//2]
+        positive_spectrum = np.abs(spectrum[:len(spectrum)//2])
+        
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.plot(positive_freqs, positive_spectrum, lw=0.4, color='black')
+        ax.set_title('Spectrum')
+        ax.set_xlabel('Frequency (Hz)')
+        ax.set_ylabel('Amplitude')
+        ax.set_xlim(0, 10000)
+        ax.set_ylim(0, None)
+        return fig, ax
+    else:
+        print("Plotting is not available. Please install matplotlib to enable this feature.")
+            
 class BaseTrack(ABC):
     def __init__(self, amplitude=1.0, position=0.0, name='', sample_rate=44100):
         """
@@ -80,6 +99,10 @@ class MonoTrack(BaseTrack):
     
     def get_length(self):
         return len(self.data) / self.sample_rate
+
+    def spectrum(self):
+        return _plot_spectrum(self.data, self.sample_rate)
+        
 
     
 class StereoTrack(BaseTrack):
@@ -205,6 +228,8 @@ class MonoMixer:
         else:
             print("Plotting is not available. Please install matplotlib to enable this feature.")
 
+    def spectrum(self):
+        return _plot_spectrum(self.get_mix(), self.sample_rate)
 
 class BaseAmplitudeEncoder(ABC):
     """
