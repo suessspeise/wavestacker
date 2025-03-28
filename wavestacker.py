@@ -37,7 +37,7 @@ try:
 except ImportError:
     warnings.warn("WavPlayer is not available because IPython.display.Audio could not be imported. Playback functionality is disabled.", ImportWarning)
 
-def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4)):
+def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4), xlim=(0,1e4)):
     if plotting_is_available:
         spectrum = np.fft.fft(signal)
         frequencies = np.fft.fftfreq(len(spectrum), 1/sample_rate)
@@ -50,7 +50,7 @@ def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4)):
         ax.set_title('Spectrum')
         ax.set_xlabel('Frequency (Hz)')
         ax.set_ylabel('Amplitude')
-        ax.set_xlim(0, 10000)
+        ax.set_xlim(*xlim)
         ax.set_ylim(0, None)
         return fig, ax
     else:
@@ -100,8 +100,8 @@ class MonoTrack(BaseTrack):
     def get_length(self):
         return len(self.data) / self.sample_rate
 
-    def spectrum(self):
-        return _plot_spectrum(self.data, self.sample_rate)
+    def spectrum(self, xlim=(0,1e4)):
+        return _plot_spectrum(self.data, self.sample_rate, xlim=xlim)
         
 
     
@@ -132,6 +132,9 @@ class StereoTrack(BaseTrack):
     
     def get_length(self):
         return len(self.left_data) / self.sample_rate
+
+    def spectrum(self, xlim=(0,1e4)):
+        return _plot_spectrum(np.concatenate(self.get_data), self.sample_rate, xlim=xlim)
     
     
 class MonoMixer:
@@ -228,8 +231,8 @@ class MonoMixer:
         else:
             print("Plotting is not available. Please install matplotlib to enable this feature.")
 
-    def spectrum(self):
-        return _plot_spectrum(self.get_mix(), self.sample_rate)
+    def spectrum(self, xlim=(0,1e4)):
+        return _plot_spectrum(self.get_mix(), self.sample_rate, xlim=xlim)
 
 class BaseAmplitudeEncoder(ABC):
     """
