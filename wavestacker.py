@@ -37,7 +37,40 @@ try:
 except ImportError:
     warnings.warn("WavPlayer is not available because IPython.display.Audio could not be imported. Playback functionality is disabled.", ImportWarning)
 
-def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4), xlim=(0,1e4)):
+def plot_spectrum(signal, sample_rate=None, figsize=None, xlim=None, ax=None, *args, **kwargs):
+    """
+    Plots the frequency spectrum of a given signal using the Fast Fourier Transform (FFT).
+
+    Parameters:
+    - signal: array-like
+        The input signal to be transformed and plotted.
+    - sample_rate: int, optional
+        The sampling rate of the signal in Hz. Defaults to 44100 Hz if not provided.
+    - figsize: tuple, optional
+        The size of the figure for the plot. Defaults to (6, 4) if not provided.
+    - xlim: tuple, optional
+        The x-axis limits for the plot, representing frequency range in Hz. Defaults to (0, 10000) Hz.
+    - ax: matplotlib.axes.Axes, optional
+        The axes on which to plot the spectrum. If not provided, a new figure and axes are created.
+    - *args: 
+        Additional positional arguments passed to the plot function.
+    - **kwargs: 
+        Additional keyword arguments passed to the plot function. Default line width is 0.4 and color is black.
+
+    Returns:
+    - fig: matplotlib.figure.Figure or None
+        The figure object containing the plot, or None if an existing axes is used.
+    - ax: matplotlib.axes.Axes
+        The axes object containing the plot.
+
+    Notes:
+    - Only the positive half of the frequency spectrum is plotted.
+    - If plotting is not available, a message is printed indicating that matplotlib needs to be installed.
+    """
+    if sample_rate == None: sample_rate = 44100
+    if figsize == None: figsize = (6, 2)
+    if xlim == None: xlim = (0,1e4)
+        
     if plotting_is_available:
         spectrum = np.fft.fft(signal)
         frequencies = np.fft.fftfreq(len(spectrum), 1/sample_rate)
@@ -45,8 +78,15 @@ def _plot_spectrum(signal, sample_rate=44100, figsize=(6, 4), xlim=(0,1e4)):
         positive_freqs = frequencies[:len(frequencies)//2]
         positive_spectrum = np.abs(spectrum[:len(spectrum)//2])
         
-        fig, ax = plt.subplots(figsize=figsize)
-        ax.plot(positive_freqs, positive_spectrum, lw=0.4, color='black')
+        if ax is None: 
+            fig, ax = plt.subplots(figsize=figsize)
+        else: 
+            fig = None # empty fig for return handle
+        
+        kwargs.setdefault('lw', 0.4)
+        kwargs.setdefault('color', 'black')
+        
+        ax.plot(positive_freqs, positive_spectrum, **kwargs)
         ax.set_title('Spectrum')
         ax.set_xlabel('Frequency (Hz)')
         ax.set_ylabel('Amplitude')
@@ -88,6 +128,13 @@ class BaseTrack(ABC):
     
     def __repr__(self):
         return f'{self.__class__.__name__}, {self.get_length():.1f}s (name="{self.name}", position={self.position}s, amplitude={self.amplitude})'
+
+    @abstractmethod
+    def spectrum(self):
+        '''
+        Look at documentation of wavestacker.plot_spectrum for details
+        '''
+        pass
     
 class MonoTrack(BaseTrack):
     def __init__(self, data=None, amplitude=1.0, position=0.0, name='', sample_rate=44100):
@@ -100,8 +147,8 @@ class MonoTrack(BaseTrack):
     def get_length(self):
         return len(self.data) / self.sample_rate
 
-    def spectrum(self, xlim=(0,1e4)):
-        return _plot_spectrum(self.data, self.sample_rate, xlim=xlim)
+    def spectrum(self, figsize=(6, 4), xlim=(0,1e4), ax=None, *args, **kwargs):
+        return plot_spectrum(self.data, self.sample_rate, figsize=figsize, xlim=xlim, ax=ax, *args, **kwargs)
         
 
     
@@ -133,8 +180,8 @@ class StereoTrack(BaseTrack):
     def get_length(self):
         return len(self.left_data) / self.sample_rate
 
-    def spectrum(self, xlim=(0,1e4)):
-        return _plot_spectrum(np.concatenate(self.get_data), self.sample_rate, xlim=xlim)
+    def spectrum(self, xlim=None, figsize=None, ax=None, *args, **kwargs):
+        return plot_spectrum(np.concatenate(self.get_data), self.sample_rate, xlim=xlim, figsize=figsize, ax=ax, *args, **kwargs)
     
     
 class MonoMixer:
@@ -225,14 +272,15 @@ class MonoMixer:
                                 len(track.data))
                 ax.plot(t,y)
                 ax.set_xlim(0, max([len(t.data)/self.sample_rate + t.position for t in self.tracks]))
-            # if len(axs) > 1:
-            #     for ax in axs[0:-1]: ax.axes.xaxis.set_ticklabels([])
             return fig, axs
         else:
             print("Plotting is not available. Please install matplotlib to enable this feature.")
 
-    def spectrum(self, xlim=(0,1e4)):
-        return _plot_spectrum(self.get_mix(), self.sample_rate, xlim=xlim)
+    def spectrum(self, figsize=None, xlim=None, ax=None, *args, **kwargs):
+        '''
+        Look at documentation of wavestacker.plot_spectrum for details
+        '''
+        return plot_spectrum(self.get_mix(), self.sample_rate, figsize=figsize, xlim=xlim, ax=ax, *args, **kwargs)
 
 class BaseAmplitudeEncoder(ABC):
     """
