@@ -260,7 +260,11 @@ class MonoMixer:
 
     def plot(self):
         if plotting_is_available:
+            if len(self.tracks) == 0:
+                print("No tracks to plot.")
+                return None, None
             fig, axs = plt.subplots(len(self.tracks), 1, figsize=(20,2*len(self.tracks)), sharex=True)
+            if len(self.tracks) == 1: axs = [axs] # ensure axs is iterable
             for ax, track in zip(axs, self.tracks):
                 ax.set_ylim(-1.1,1.1)
                 ax.set_title(track.name, loc='left')
@@ -394,7 +398,7 @@ class MonoAudioBuffer:
         audio_buffer (bytearray): The buffer to store the generated audio data.
         encoder (Encoder): The encoder used to encode audio data.
     """
-    def __init__(self, encoder=AmplitudeEncoder(), sample_rate=44100):
+    def __init__(self, data=None, encoder=AmplitudeEncoder(), sample_rate=44100):
         """
         Initialize the AudioBuffer with the given sample rate and baud rate.
 
@@ -408,6 +412,7 @@ class MonoAudioBuffer:
         self.encoder.set_sample_rate(self.sample_rate)
         self.data = []
         self.checksum = 0
+        if data is not None: self.add_audio_data(data)
     
     def __repr__(self):
         return f'{self.class_description}, encoder = {self.encoder}, contains {len(self.data)/self.sample_rate:.2f}s'
@@ -595,3 +600,7 @@ class StereoAudioBuffer(MonoAudioBuffer):
         left_channel = decoded_data[0::2]
         right_channel = decoded_data[1::2]
         return left_channel, right_channel
+
+# defaulting to mono
+Buffer = MonoAudioBuffer
+Mixer = MonoMixer
